@@ -1,0 +1,758 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AeroPost</title>
+<style>
+:root{--ink:#0a3a5a;--ink2:#4a7a96;--line:#a6d8ee;--sky:#35b3f0;--glass:linear-gradient(180deg,rgba(255,255,255,.86),rgba(255,255,255,.55));
+  --ui:"Frutiger","Segoe UI","Trebuchet MS","Lucida Grande",system-ui,sans-serif;--mono:Consolas,"Cascadia Mono","SF Mono",Menlo,monospace}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font:14px/1.4 var(--ui);color:var(--ink);overflow:hidden;
+  background:radial-gradient(900px 520px at 8% -8%,rgba(255,255,255,.95),rgba(255,255,255,0) 70%),
+  linear-gradient(180deg,#38aeea 0%,#7fd5fb 36%,#d3f4ff 62%,#c6f29a 100%) fixed}
+body::after{content:"";position:fixed;left:-12%;right:-12%;bottom:-22vh;height:38vh;border-radius:50%;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 0,#b7f176 0,#68c334 62%,#4aa626 100%);opacity:.85;box-shadow:0 -10px 40px rgba(120,210,60,.5)}
+.bubbles{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:0}
+.bubbles span{position:absolute;border-radius:50%;animation:float 20s ease-in-out infinite;
+  background:radial-gradient(circle at 30% 26%,rgba(255,255,255,.95) 0,rgba(255,255,255,.35) 20%,rgba(150,225,255,.14) 55%,rgba(255,255,255,.5) 100%);
+  box-shadow:inset 0 0 18px rgba(255,255,255,.65),0 6px 22px rgba(0,120,200,.16)}
+.bubbles span:nth-child(1){width:240px;height:240px;left:-70px;top:14%}
+.bubbles span:nth-child(2){width:110px;height:110px;left:34%;top:6%;animation-delay:-4s}
+.bubbles span:nth-child(3){width:170px;height:170px;right:-40px;top:22%;animation-delay:-9s}
+.bubbles span:nth-child(4){width:70px;height:70px;right:24%;bottom:20%;animation-delay:-2s}
+.bubbles span:nth-child(5){width:130px;height:130px;left:18%;bottom:8%;animation-delay:-12s}
+.bubbles span:nth-child(6){width:46px;height:46px;left:60%;top:48%;animation-delay:-7s}
+@keyframes float{50%{transform:translate(12px,-28px)}}
+@media (prefers-reduced-motion:reduce){.bubbles span,.spin{animation:none}}
+
+#app{position:relative;z-index:1;height:100vh;display:grid;grid-template-columns:300px minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);gap:14px;padding:14px}
+.glass{background:var(--glass);border:1px solid rgba(255,255,255,.9);border-radius:18px;backdrop-filter:blur(14px) saturate(1.35);
+  box-shadow:0 10px 32px rgba(8,110,170,.28),inset 0 1px 0 #fff,inset 0 -1px 0 rgba(255,255,255,.5)}
+.top{grid-column:1/-1;display:flex;align-items:center;gap:10px;padding:8px 14px;flex-wrap:wrap}
+.logo{display:flex;align-items:center;gap:10px;font-size:22px;letter-spacing:.2px;text-shadow:0 1px 0 #fff}
+.logo b{color:#1286cc;font-weight:700}
+.orb{display:inline-block;width:28px;height:28px;border-radius:50%;position:relative;
+  background:radial-gradient(circle at 35% 30%,#fff 0,#9be6ff 22%,#2aa8e8 60%,#0e6fb0 100%);box-shadow:0 2px 8px rgba(0,100,170,.5),inset 0 -3px 6px rgba(0,80,140,.35)}
+.orb::after{content:"";position:absolute;left:14%;right:14%;top:6%;height:42%;border-radius:50%;background:linear-gradient(rgba(255,255,255,.9),rgba(255,255,255,.1))}
+.orb.big{width:64px;height:64px}
+.grow{flex:1}
+.top label{color:var(--ink2);font-size:12px}
+
+/* controls */
+.btn{position:relative;overflow:hidden;cursor:pointer;border:1px solid #1f86bd;border-radius:999px;padding:7px 18px;font:600 14px var(--ui);color:#fff;
+  text-shadow:0 -1px 0 rgba(0,60,110,.55);background:linear-gradient(180deg,#8bdcff 0%,#34aeea 48%,#1388cf 52%,#3db9f2 100%);
+  box-shadow:0 2px 6px rgba(8,90,140,.4),inset 0 1px 1px rgba(255,255,255,.8);transition:filter .15s,transform .05s}
+.btn::before{content:"";position:absolute;left:7%;right:7%;top:2px;height:44%;border-radius:999px;background:linear-gradient(rgba(255,255,255,.75),rgba(255,255,255,.12));pointer-events:none}
+.btn:hover{filter:brightness(1.07) saturate(1.1)}.btn:active{transform:translateY(1px);filter:brightness(.96)}
+.btn.green{border-color:#3f8f1c;background:linear-gradient(180deg,#b6f27c 0%,#6fd135 48%,#44a613 52%,#7fdc43 100%);text-shadow:0 -1px 0 rgba(30,90,0,.55)}
+.btn.red{border-color:#b03a2a;background:linear-gradient(180deg,#ffb9a8 0%,#f0694e 48%,#d03d22 52%,#f47e63 100%);text-shadow:0 -1px 0 rgba(120,20,0,.5)}
+.btn.ghost{color:var(--ink);text-shadow:0 1px 0 #fff;border-color:#9cd0e8;background:linear-gradient(180deg,#fff 0%,#e6f6ff 50%,#cdeafa 52%,#e9f8ff 100%);box-shadow:0 1px 4px rgba(8,90,140,.22),inset 0 1px 1px #fff}
+.btn.sm{padding:3px 11px;font-size:12px}
+.btn[disabled]{opacity:.55;pointer-events:none}
+.ib{display:inline-grid;place-items:center;width:24px;height:24px;border:0;border-radius:8px;background:transparent;color:var(--ink2);cursor:pointer;padding:0}
+.ib:hover{background:rgba(255,255,255,.85);color:#0b6aa6;box-shadow:0 1px 3px rgba(0,90,140,.25)}
+.txt,.sel{width:100%;min-width:0;border:1px solid var(--line);border-radius:10px;padding:7px 10px;background:linear-gradient(#eef9ff,#fff);color:var(--ink);font:inherit;
+  box-shadow:inset 0 1px 3px rgba(0,90,140,.2)}
+.sel{width:auto;cursor:pointer;padding-right:6px}
+.sel.sm,.txt.sm{padding:4px 6px;font-size:12px}
+.txt:focus,.sel:focus{outline:none;border-color:#35b5ff;box-shadow:0 0 0 3px rgba(53,181,255,.32),inset 0 1px 3px rgba(0,90,140,.2)}
+.area{font:12.5px/1.5 var(--mono);resize:none;height:100%;min-height:160px;white-space:pre;tab-size:2}
+input[type=checkbox]{accent-color:#1fa0e6;width:15px;height:15px}
+.muted{color:var(--ink2)}
+
+/* sidebar */
+.side{display:flex;flex-direction:column;min-height:0;padding:12px;gap:10px}
+.seg{display:flex;gap:4px;padding:3px;border-radius:999px;background:rgba(10,120,180,.12);box-shadow:inset 0 1px 3px rgba(0,80,130,.25)}
+.seg button{flex:1;border:0;border-radius:999px;padding:5px 10px;font:600 13px var(--ui);color:var(--ink2);background:transparent;cursor:pointer}
+.seg button.on{color:#fff;text-shadow:0 -1px 0 rgba(0,60,110,.5);background:linear-gradient(180deg,#8bdcff,#34aeea 48%,#1388cf 52%,#3db9f2);box-shadow:0 1px 4px rgba(8,90,140,.4),inset 0 1px 1px rgba(255,255,255,.8)}
+.list{flex:1;overflow:auto;margin:0 -4px;padding:0 4px;min-height:0}
+.col{margin-bottom:6px}
+.colh{display:flex;align-items:center;gap:2px;padding:4px 4px;border-radius:10px;cursor:pointer;font-weight:600}
+.colh:hover{background:rgba(255,255,255,.6)}
+.colh .caret{transition:transform .15s;display:inline-grid;place-items:center;width:18px}
+.colh.open .caret{transform:rotate(90deg)}
+.colh .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.acts{display:none;gap:0}.colh:hover .acts,.item:hover .acts{display:flex}
+.item{display:flex;align-items:center;gap:7px;padding:5px 6px 5px 22px;border-radius:10px;cursor:pointer}
+.item:hover{background:rgba(255,255,255,.65)}
+.item.on{background:linear-gradient(180deg,#fff,#d9f2ff);box-shadow:0 1px 4px rgba(8,100,160,.28),inset 0 0 0 1px #bfe6f8}
+.item .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .sub{display:block;font-size:11px;color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .txtc{flex:1;min-width:0}
+.hist{padding-left:8px}
+.mt{font:700 10px var(--mono);min-width:42px;text-align:left}
+.GET{color:#27963a}.POST{color:#e07d00}.PUT{color:#1a78d0}.PATCH{color:#8a4fd0}.DELETE{color:#d63b2a}.HEAD,.OPTIONS{color:#5a8aa5}
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;height:100%;color:var(--ink2);text-align:center;padding:20px}
+
+/* main */
+main{display:flex;flex-direction:column;min-width:0;min-height:0}
+#tabs{display:flex;gap:4px;align-items:flex-end;overflow-x:auto;padding:0 6px;min-height:36px;scrollbar-width:thin}
+.tab{display:flex;align-items:center;gap:7px;flex:0 0 auto;max-width:230px;padding:7px 8px 7px 12px;border-radius:14px 14px 0 0;border:1px solid rgba(255,255,255,.85);border-bottom:0;
+  background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,.22));cursor:pointer;color:var(--ink2)}
+.tab.on{background:var(--glass);color:var(--ink);font-weight:600;box-shadow:0 -2px 8px rgba(8,110,170,.15)}
+.tab .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px}
+.tab .dot{width:8px;height:8px;border-radius:50%;background:#f39a1c;box-shadow:0 0 6px #f6b24a}
+.work{flex:1;min-height:0;display:grid;grid-template-rows:var(--split,50%) 10px minmax(0,1fr);border-radius:0 18px 18px 18px;overflow:hidden}
+#editor{display:flex;flex-direction:column;min-height:0;padding:12px 14px 0}
+.urlbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.urlbar .txt{flex:1;min-width:200px;font:14px var(--mono)}
+.msel{font-weight:700;border-radius:999px;padding:7px 12px;border:1px solid #9cd0e8;background:linear-gradient(180deg,#fff,#dff3ff);cursor:pointer;box-shadow:0 1px 4px rgba(8,90,140,.22),inset 0 1px 1px #fff;font-family:var(--ui)}
+.rtabs{display:flex;gap:2px;margin-top:10px;border-bottom:1px solid var(--line)}
+.rtabs button{position:relative;border:0;background:transparent;padding:6px 12px;font:600 13px var(--ui);color:var(--ink2);cursor:pointer;border-radius:10px 10px 0 0}
+.rtabs button:hover{color:var(--ink);background:rgba(255,255,255,.5)}
+.rtabs button.on{color:#0c72b0;background:rgba(255,255,255,.8)}
+.rtabs button.on::after{content:"";position:absolute;left:8px;right:8px;bottom:-1px;height:3px;border-radius:3px;background:linear-gradient(90deg,#3dc0ff,#7be04a)}
+.bdg{display:inline-block;min-width:18px;margin-left:5px;padding:0 5px;border-radius:9px;font-size:11px;line-height:17px;text-align:center;color:#fff;background:#2aa5e6}
+.pane{flex:1;overflow:auto;padding:12px 2px 14px;min-height:0}
+.kv{display:flex;flex-direction:column;gap:6px}
+.kvrow{display:grid;grid-template-columns:22px minmax(110px,1fr) minmax(110px,2fr) 26px;gap:6px;align-items:center}
+.kv.file .kvrow{grid-template-columns:22px minmax(110px,1fr) 78px minmax(110px,2fr) 26px}
+.vcell{display:flex;gap:8px;align-items:center;min-width:0}
+.fname{font-size:12px;color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.radios{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.radio{display:inline-flex;gap:6px;align-items:center;padding:4px 12px;border-radius:999px;cursor:pointer;border:1px solid #bfe3f4;background:rgba(255,255,255,.6)}
+.radio input{display:none}
+.radio.on{color:#fff;font-weight:600;border-color:#1f86bd;background:linear-gradient(180deg,#8bdcff,#34aeea 48%,#1388cf 52%,#3db9f2);text-shadow:0 -1px 0 rgba(0,60,110,.5)}
+.field{display:grid;grid-template-columns:110px minmax(0,1fr);gap:8px;align-items:center;margin-bottom:8px;max-width:640px}
+.hint{font-size:12px;color:var(--ink2);margin:6px 0 0}
+.hint.warn{color:#b86a00}
+.bodywrap{display:flex;flex-direction:column;height:100%}
+#split{cursor:row-resize;display:grid;place-items:center}
+#split::before{content:"";width:64px;height:4px;border-radius:4px;background:linear-gradient(#fff,#b4e3f7);box-shadow:0 1px 2px rgba(0,90,140,.4)}
+#response{display:flex;flex-direction:column;min-height:0;padding:0 14px 12px}
+.rhead{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:2px 0 8px}
+.pill{padding:2px 11px;border-radius:999px;font:600 12px var(--ui);border:1px solid #b9dff0;background:#fff;color:var(--ink2);box-shadow:inset 0 1px 2px rgba(0,90,140,.12)}
+.pill.s2{color:#fff;border-color:#3f9a1c;background:linear-gradient(180deg,#a5ec6a,#4eb21d)}
+.pill.s3{color:#fff;border-color:#1f86bd;background:linear-gradient(180deg,#8bdcff,#1f9be0)}
+.pill.s4{color:#fff;border-color:#c77a00;background:linear-gradient(180deg,#ffd27a,#ee9712)}
+.pill.s5,.pill.s1,.pill.s0{color:#fff;border-color:#b03a2a;background:linear-gradient(180deg,#ffae9c,#e5523a)}
+.rview{flex:1;min-height:0;overflow:auto;border-radius:12px;border:1px solid #b9dff0;background:rgba(255,255,255,.82);box-shadow:inset 0 1px 4px rgba(0,90,140,.15)}
+.code{margin:0;padding:12px 14px;font:12.5px/1.55 var(--mono);white-space:pre-wrap;word-break:break-all;color:#12425f}
+.jk{color:#0a69a8}.js{color:#2a8a1e}.jn{color:#c4620a}.jb{color:#9a3fc0}.jz{color:#8a8a8a}
+.htab{width:100%;border-collapse:collapse;font-size:13px}
+.htab td{padding:5px 12px;border-bottom:1px solid #e0f1f9;vertical-align:top;word-break:break-all}
+.htab td:first-child{width:32%;font-weight:600;color:#0c6aa5}
+.errcard{margin:auto;max-width:520px;padding:18px 22px;border-radius:16px;background:linear-gradient(#fff1ed,#ffe0d8);border:1px solid #f0a290;box-shadow:0 4px 14px rgba(200,70,40,.2)}
+.errcard p{margin:6px 0 0;font-family:var(--mono);font-size:13px;word-break:break-word}
+.spin{width:46px;height:46px;border-radius:50%;animation:pulse 1.1s ease-in-out infinite;
+  background:radial-gradient(circle at 32% 28%,#fff 0,#a8ecff 25%,#2aa8e8 70%,#0e6fb0 100%);box-shadow:0 4px 14px rgba(0,110,180,.45)}
+@keyframes pulse{50%{transform:scale(1.25);opacity:.7}}
+iframe.prev{width:100%;height:100%;border:0;background:#fff}
+img.prev{max-width:100%;display:block;margin:12px auto}
+
+/* dialog + toast */
+dialog{border:1px solid #fff;border-radius:22px;padding:0;color:var(--ink);min-width:340px;max-width:min(92vw,520px);
+  background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(222,244,255,.94));box-shadow:0 20px 60px rgba(0,80,140,.5)}
+dialog.wide{width:780px;max-width:94vw}
+dialog::backdrop{background:rgba(8,90,140,.3);backdrop-filter:blur(5px)}
+.dhead{padding:14px 20px;font-size:17px;font-weight:700;border-bottom:1px solid #cfe9f5;background:linear-gradient(180deg,#fff,#e4f6ff);border-radius:22px 22px 0 0}
+.dbody{padding:16px 20px;max-height:62vh;overflow:auto}
+.dfoot{display:flex;justify-content:flex-end;gap:8px;padding:12px 20px 16px}
+.dbody .field{grid-template-columns:100px 1fr}
+.envdlg{display:grid;grid-template-columns:200px 1fr;gap:16px;min-height:280px}
+.envlist{display:flex;flex-direction:column;gap:5px;align-items:stretch}
+.envitem{text-align:left;border:1px solid #c3e5f5;border-radius:10px;padding:6px 10px;background:#fff;cursor:pointer;font:inherit;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.envitem.on{background:linear-gradient(180deg,#fff,#d4f0ff);border-color:#35b3f0;font-weight:600}
+.envedit{display:flex;flex-direction:column;gap:10px;min-width:0}
+#toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,20px);opacity:0;pointer-events:none;z-index:50;padding:9px 20px;border-radius:999px;transition:.25s;font-weight:600}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:rgba(40,150,210,.4);border-radius:10px;border:2px solid transparent;background-clip:padding-box}
+@media (max-width:860px){body{overflow:auto}#app{grid-template-columns:1fr;grid-template-rows:auto 240px minmax(560px,auto);height:auto;min-height:100vh}.work{height:80vh}}
+</style>
+</head>
+<body>
+<div class="bubbles"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+
+<div id="app">
+  <header class="glass top">
+    <div class="logo"><i class="orb"></i><span><b>Aero</b>Post</span></div>
+    <div class="grow"></div>
+    <label for="envSel">Environment</label>
+    <select id="envSel" class="sel"></select>
+    <button class="btn ghost sm" id="envBtn">Manage</button>
+    <button class="btn ghost sm" id="impBtn">Import</button>
+    <button class="btn ghost sm" id="expBtn">Export</button>
+  </header>
+
+  <aside class="glass side">
+    <div class="seg" id="sideSeg"><button data-s="cols" class="on">Collections</button><button data-s="hist">History</button></div>
+    <input id="search" class="txt sm" placeholder="Search…">
+    <div id="sideTools" style="display:flex;gap:6px"></div>
+    <div class="list" id="sideList"></div>
+  </aside>
+
+  <main>
+    <div id="tabs"></div>
+    <section class="glass work" id="work">
+      <div id="editor">
+        <div class="urlbar">
+          <select id="method" class="msel"></select>
+          <input id="url" class="txt" spellcheck="false" placeholder="https://api.example.com/users  —  supports {{variables}}">
+          <button class="btn green" id="send">Send</button>
+          <button class="btn" id="save">Save</button>
+          <button class="btn ghost sm" id="saveAs">Save as…</button>
+          <button class="btn ghost sm" id="curl">cURL</button>
+        </div>
+        <div class="rtabs" id="rtabs"></div>
+        <div class="pane" id="pane"></div>
+      </div>
+      <div id="split" title="Drag to resize"></div>
+      <div id="response"></div>
+    </section>
+  </main>
+</div>
+
+<datalist id="hdrs">
+  <option value="Accept"><option value="Accept-Language"><option value="Authorization"><option value="Cache-Control"><option value="Content-Type">
+  <option value="Cookie"><option value="Origin"><option value="Referer"><option value="User-Agent"><option value="X-Api-Key"><option value="X-Requested-With">
+</datalist>
+<dialog id="dlg"></dialog>
+<input type="file" id="importFile" accept=".json,application/json" hidden>
+<div id="toast" class="glass"></div>
+
+<script>
+'use strict';
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const uid = () => Math.random().toString(36).slice(2, 10);
+const clone = o => JSON.parse(JSON.stringify(o));
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const PROP = new Set(['value', 'checked', 'selected', 'disabled']);
+function h(tag, attrs, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k === 'class') e.className = v;
+    else if (k === 'html') e.innerHTML = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (PROP.has(k)) e[k] = v;
+    else e.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of kids.flat(Infinity)) if (c != null && c !== false) e.append(c.nodeType ? c : document.createTextNode(c));
+  return e;
+}
+const svg = p => `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+const ic = {
+  plus: svg('<path d="M12 5v14M5 12h14"/>'), edit: svg('<path d="M4 20h4L19 9l-4-4L4 16v4z"/>'),
+  trash: svg('<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>'), copy: svg('<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5h10"/>'),
+  close: svg('<path d="M6 6l12 12M18 6L6 18"/>'), caret: svg('<path d="M9 6l6 6-6 6"/>'),
+};
+const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
+const RAWCT = { json: 'application/json', text: 'text/plain', xml: 'application/xml', html: 'text/html' };
+const fmtSize = n => n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(1) + ' KB' : (n / 1048576).toFixed(2) + ' MB';
+const fmtTime = ms => ms < 1000 ? ms + ' ms' : (ms / 1000).toFixed(2) + ' s';
+const b64utf8 = s => btoa(String.fromCharCode(...new TextEncoder().encode(s)));
+const b64File = f => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1] || ''); r.onerror = no; r.readAsDataURL(f); });
+const encQ = s => encodeURIComponent(s).replace(/%7B/g, '{').replace(/%7D/g, '}');
+const encF = s => encodeURIComponent(s).replace(/%20/g, '+');
+const dec = s => { try { return decodeURIComponent(s); } catch { return s; } };
+const isBlank = r => !r.k && !r.v && !r.file;
+
+const newReq = () => ({
+  id: uid(), name: '', method: 'GET', url: '', params: [], headers: [],
+  auth: { type: 'none', token: '', user: '', pass: '', key: '', value: '', in: 'header' },
+  body: { mode: 'none', rawType: 'json', raw: '', form: [], urlenc: [] },
+  settings: { follow: true, timeout: 30000 },
+});
+function trimReq(r) {
+  const c = clone(r);
+  for (const k of ['params', 'headers']) c[k] = c[k].filter(x => !isBlank(x));
+  for (const k of ['form', 'urlenc']) c.body[k] = c.body[k].filter(x => !isBlank(x));
+  return c;
+}
+function stripFiles(r) { for (const f of r.body.form) if (f.file) f.file = { name: f.file.name }; return r; }
+
+/* ---------- state ---------- */
+let S = { collections: [], history: [], envs: [], activeEnv: null, seeded: false };
+let tabs = [], cur = null, sideMode = 'cols';
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, { ...opts, headers: { 'X-AeroPost': '1', 'Content-Type': 'application/json', ...(opts.headers || {}) } });
+  return r.json();
+}
+let pt;
+function persist() {
+  clearTimeout(pt);
+  pt = setTimeout(() => {
+    const copy = clone(S);
+    copy.envs.forEach(e => e.vars = e.vars.filter(v => v.k || v.v));
+    api('/api/data', { method: 'PUT', body: JSON.stringify(copy) }).catch(() => toast('Could not save data'));
+  }, 300);
+}
+let tt;
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(tt); tt = setTimeout(() => t.classList.remove('on'), 1800); }
+
+/* ---------- dialogs ---------- */
+function modal({ title, body, ok = 'OK', cancel = 'Cancel', onok, wide }) {
+  const d = $('#dlg'); d.innerHTML = ''; d.className = wide ? 'wide' : '';
+  d.append(h('div', { class: 'dhead' }, title), h('div', { class: 'dbody' }, body),
+    h('div', { class: 'dfoot' },
+      cancel && h('button', { class: 'btn ghost', onclick: () => d.close() }, cancel),
+      ok && h('button', { class: 'btn', onclick: () => { if (!onok || onok() !== false) d.close(); } }, ok)));
+  d.showModal();
+  const first = d.querySelector('input.txt'); if (first) { first.focus(); first.select(); }
+}
+$('#dlg').addEventListener('close', () => { persist(); renderEnvSel(); renderSide(); renderTabs(); });
+function ask(title, value, cb, ok = 'OK') {
+  const inp = h('input', { class: 'txt', value, onkeydown: e => { if (e.key === 'Enter') { cb(inp.value.trim()); $('#dlg').close(); } } });
+  modal({ title, body: inp, ok, onok: () => { if (!inp.value.trim()) return false; cb(inp.value.trim()); } });
+}
+function sure(msg, cb) { modal({ title: 'Are you sure?', body: h('p', {}, msg), ok: 'Delete', onok: () => { cb(); } }); }
+
+/* ---------- key/value table ---------- */
+function kvTable(rows, o = {}) {
+  const { file = false, ph = ['Key', 'Value'], list = null, onchange = () => {} } = o;
+  const box = h('div', { class: 'kv' + (file ? ' file' : '') });
+  const add = () => { const r = { k: '', v: '', on: true, type: 'text' }; rows.push(r); box.append(row(r)); };
+  function row(r) {
+    const el = h('div', { class: 'kvrow' });
+    const touch = () => { if (el === box.lastElementChild && !isBlank(r)) add(); onchange(); };
+    const cb = h('input', { type: 'checkbox', checked: r.on !== false, onchange: e => { r.on = e.target.checked; onchange(); } });
+    const k = h('input', { class: 'txt', placeholder: ph[0], value: r.k, list, spellcheck: 'false', oninput: e => { r.k = e.target.value; touch(); } });
+    const vcell = h('div', { class: 'vcell' });
+    const drawV = () => {
+      vcell.innerHTML = '';
+      if (file && r.type === 'file') {
+        const inp = h('input', { type: 'file', hidden: true, onchange: async e => {
+          const f = e.target.files[0]; if (!f) return;
+          r.file = { name: f.name, mime: f.type, data: await b64File(f) }; r.v = ''; drawV(); touch();
+        } });
+        vcell.append(inp, h('button', { class: 'btn ghost sm', onclick: () => inp.click() }, r.file ? 'Change' : 'Choose file'), h('span', { class: 'fname' }, r.file ? r.file.name : 'No file'));
+      } else vcell.append(h('input', { class: 'txt', placeholder: ph[1], value: r.v, spellcheck: 'false', oninput: e => { r.v = e.target.value; touch(); } }));
+    };
+    drawV();
+    const typ = file ? h('select', { class: 'sel sm', onchange: e => { r.type = e.target.value; drawV(); onchange(); } },
+      h('option', { value: 'text', selected: r.type !== 'file' }, 'Text'), h('option', { value: 'file', selected: r.type === 'file' }, 'File')) : null;
+    const del = h('button', { class: 'ib', title: 'Remove', html: ic.close, onclick: () => {
+      rows.splice(rows.indexOf(r), 1); el.remove();
+      if (!box.lastElementChild || !isBlank(rows[rows.length - 1])) add();
+      onchange();
+    } });
+    el.append(...[cb, k, typ, vcell, del].filter(Boolean));
+    return el;
+  }
+  rows.forEach(r => box.append(row(r)));
+  if (!rows.length || !isBlank(rows[rows.length - 1])) add();
+  return box;
+}
+
+/* ---------- url <-> params ---------- */
+function splitUrl(u) {
+  const hi = u.indexOf('#'); const hash = hi >= 0 ? u.slice(hi) : ''; if (hi >= 0) u = u.slice(0, hi);
+  const qi = u.indexOf('?');
+  return qi >= 0 ? [u.slice(0, qi), u.slice(qi + 1), hash] : [u, null, hash];
+}
+function urlFromParams(t) {
+  const [base, , hash] = splitUrl(t.req.url);
+  const q = t.req.params.filter(r => r.on !== false && r.k).map(r => encQ(r.k) + '=' + encQ(r.v)).join('&');
+  t.req.url = base + (q ? '?' + q : '') + hash;
+  $('#url').value = t.req.url;
+}
+function paramsFromUrl(t) {
+  const [, q] = splitUrl(t.req.url);
+  const off = t.req.params.filter(r => r.on === false && (r.k || r.v));
+  const parsed = q ? q.split('&').filter(Boolean).map(p => { const i = p.indexOf('='); return { k: dec(i >= 0 ? p.slice(0, i) : p), v: dec(i >= 0 ? p.slice(i + 1) : ''), on: true, type: 'text' }; }) : [];
+  t.req.params = [...parsed, ...off];
+}
+
+/* ---------- environments ---------- */
+const envVars = () => {
+  const e = S.envs.find(x => x.id === S.activeEnv), m = {};
+  if (e) for (const v of e.vars) if (v.on !== false && v.k) m[v.k.trim()] = v.v;
+  return m;
+};
+const resolve = (s, vars) => String(s ?? '').replace(/\{\{\s*([\w.\-]+)\s*\}\}/g, (m, k) => k in vars ? vars[k] : m);
+function renderEnvSel() {
+  const s = $('#envSel'); s.innerHTML = '';
+  s.append(h('option', { value: '' }, 'No environment'), S.envs.map(e => h('option', { value: e.id, selected: e.id === S.activeEnv }, e.name || 'Untitled')));
+}
+$('#envSel').onchange = e => { S.activeEnv = e.target.value || null; persist(); };
+function envDialog() {
+  let sel = S.envs.find(e => e.id === S.activeEnv) || S.envs[0];
+  const body = h('div', { class: 'envdlg' });
+  const draw = () => {
+    body.innerHTML = '';
+    const list = h('div', { class: 'envlist' },
+      S.envs.map(e => h('button', { class: 'envitem' + (e === sel ? ' on' : ''), onclick: () => { sel = e; draw(); } }, e.name || 'Untitled')),
+      h('button', { class: 'btn ghost sm', onclick: () => { const e = { id: uid(), name: 'New environment', vars: [] }; S.envs.push(e); sel = e; draw(); } }, '+ New environment'));
+    const right = h('div', { class: 'envedit' });
+    if (sel) right.append(
+      h('input', { class: 'txt', value: sel.name, oninput: ev => { sel.name = ev.target.value; } }),
+      h('div', { class: 'muted' }, 'Use variables as ', h('code', {}, '{{name}}'), ' in URL, headers, params, auth and body.'),
+      kvTable(sel.vars, { ph: ['Variable', 'Value'] }),
+      h('div', {}, h('button', { class: 'btn ghost sm', onclick: () => { S.envs = S.envs.filter(e => e !== sel); if (S.activeEnv === sel.id) S.activeEnv = null; sel = S.envs[0]; draw(); } }, 'Delete environment')));
+    else right.append(h('p', { class: 'muted' }, 'No environments yet. Create one to reuse values like {{baseUrl}} or {{token}}.'));
+    body.append(list, right);
+  };
+  draw();
+  modal({ title: 'Environments', body, ok: 'Done', cancel: null, wide: true });
+}
+
+/* ---------- tabs ---------- */
+function openTab(req, link = null) {
+  const t = { id: uid(), req: clone(req), link, dirty: false, res: null, rv: { tab: 'body', view: null }, sub: 'params', busy: false };
+  tabs.push(t); selectTab(t.id);
+}
+function selectTab(id) { cur = tabs.find(t => t.id === id) || null; renderAll(); }
+function closeTab(t) {
+  const go = () => {
+    const i = tabs.indexOf(t); tabs.splice(i, 1);
+    if (t.ctl) t.ctl.abort();
+    if (cur === t) cur = tabs[Math.min(i, tabs.length - 1)] || null;
+    if (!tabs.length) openTab(newReq()); else renderAll();
+  };
+  if (t.dirty) modal({ title: 'Unsaved changes', body: h('p', {}, 'This request has unsaved changes. Close it anyway?'), ok: 'Close tab', onok: go }); else go();
+}
+const tabTitle = t => t.req.name || t.req.url || 'Untitled request';
+function renderTabs() {
+  const box = $('#tabs'); box.innerHTML = '';
+  for (const t of tabs) box.append(h('div', { class: 'tab' + (t === cur ? ' on' : ''), title: tabTitle(t),
+    onclick: () => selectTab(t.id), onauxclick: e => { if (e.button === 1) closeTab(t); },
+    ondblclick: () => ask('Rename request', t.req.name || '', v => { t.req.name = v; t.dirty = true; renderTabs(); }) },
+    h('span', { class: 'mt ' + t.req.method, style: 'min-width:0' }, t.req.method),
+    h('span', { class: 'nm' }, tabTitle(t)), t.dirty && h('i', { class: 'dot', title: 'Unsaved changes' }),
+    h('button', { class: 'ib', html: ic.close, title: 'Close', onclick: e => { e.stopPropagation(); closeTab(t); } })));
+  box.append(h('button', { class: 'btn ghost sm', style: 'margin:0 0 4px 4px', onclick: () => openTab(newReq()) }, '+'));
+}
+function dirty() { if (cur) { cur.dirty = true; renderTabs(); } }
+
+/* ---------- save ---------- */
+function guessName(r) { try { const u = new URL(/^[a-z]+:\/\//i.test(r.url) ? r.url : 'http://' + r.url); return `${r.method} ${u.pathname === '/' ? u.host : u.pathname}`; } catch { return `${r.method} ${r.url || 'request'}`.trim(); } }
+function save(as) {
+  const t = cur; if (!t) return;
+  if (t.link && !as) {
+    const col = S.collections.find(c => c.id === t.link.cid), i = col ? col.requests.findIndex(r => r.id === t.req.id) : -1;
+    if (col && i >= 0) {
+      if (!t.req.name) t.req.name = guessName(t.req);
+      col.requests[i] = trimReq(t.req); t.dirty = false; persist(); renderTabs(); renderSide(); toast('Saved'); return;
+    }
+  }
+  const name = h('input', { class: 'txt', value: t.req.name || guessName(t.req) });
+  const colSel = h('select', { class: 'sel', style: 'width:100%', onchange: () => { newName.parentElement.style.display = colSel.value === '__new' ? '' : 'none'; } },
+    S.collections.map(c => h('option', { value: c.id, selected: t.link && t.link.cid === c.id }, c.name)), h('option', { value: '__new', selected: !S.collections.length }, '+ New collection…'));
+  const newName = h('input', { class: 'txt', value: 'My Collection' });
+  const body = h('div', {}, h('div', { class: 'field' }, h('label', {}, 'Name'), name), h('div', { class: 'field' }, h('label', {}, 'Collection'), colSel),
+    h('div', { class: 'field', style: S.collections.length ? 'display:none' : '' }, h('label', {}, 'New name'), newName));
+  newName.parentElement.style.display = S.collections.length ? 'none' : '';
+  modal({ title: as ? 'Save request as…' : 'Save request', body, ok: 'Save', onok: () => {
+    if (!name.value.trim()) return false;
+    let col;
+    if (colSel.value === '__new') { col = { id: uid(), name: newName.value.trim() || 'My Collection', requests: [] }; S.collections.push(col); }
+    else col = S.collections.find(c => c.id === colSel.value);
+    const r = trimReq(t.req); r.id = uid(); r.name = name.value.trim();
+    col.requests.push(r); col.collapsed = false;
+    t.req.id = r.id; t.req.name = r.name; t.link = { cid: col.id }; t.dirty = false;
+    persist(); toast('Saved'); } });
+}
+function openSaved(cid, r) {
+  const ex = tabs.find(t => t.link && t.link.cid === cid && t.req.id === r.id);
+  if (ex) selectTab(ex.id); else openTab(r, { cid });
+}
+
+/* ---------- sidebar ---------- */
+$('#sideSeg').onclick = e => { const s = e.target.dataset.s; if (!s) return; sideMode = s; [...$('#sideSeg').children].forEach(b => b.classList.toggle('on', b.dataset.s === s)); renderSide(); };
+$('#search').oninput = () => renderSide();
+const reqMatch = (r, q) => !q || (r.name + ' ' + r.url + ' ' + r.method).toLowerCase().includes(q);
+function renderSide() {
+  const list = $('#sideList'), tools = $('#sideTools'), q = $('#search').value.trim().toLowerCase();
+  list.innerHTML = ''; tools.innerHTML = '';
+  if (sideMode === 'cols') {
+    tools.append(h('button', { class: 'btn sm', onclick: () => ask('New collection', 'New collection', v => { S.collections.push({ id: uid(), name: v, requests: [] }); persist(); renderSide(); }, 'Create') }, '+ Collection'));
+    if (!S.collections.length) list.append(h('div', { class: 'empty' }, h('span', {}, 'No saved requests yet.'), h('small', {}, 'Build a request and hit Save.')));
+    for (const c of S.collections) {
+      const reqs = c.requests.filter(r => reqMatch(r, q)); if (q && !reqs.length) continue;
+      const open = q ? true : !c.collapsed;
+      list.append(h('div', { class: 'col' },
+        h('div', { class: 'colh' + (open ? ' open' : ''), onclick: () => { c.collapsed = open; persist(); renderSide(); } },
+          h('span', { class: 'caret', html: ic.caret }), h('span', { class: 'nm' }, c.name), h('small', { class: 'muted' }, String(c.requests.length)),
+          h('span', { class: 'acts' },
+            h('button', { class: 'ib', title: 'New request here', html: ic.plus, onclick: e => { e.stopPropagation(); const r = newReq(); r.name = 'New request'; c.requests.push(r); c.collapsed = false; persist(); openTab(r, { cid: c.id }); } }),
+            h('button', { class: 'ib', title: 'Rename', html: ic.edit, onclick: e => { e.stopPropagation(); ask('Rename collection', c.name, v => { c.name = v; persist(); renderSide(); }); } }),
+            h('button', { class: 'ib', title: 'Delete', html: ic.trash, onclick: e => { e.stopPropagation(); sure(`Delete collection “${c.name}” and its ${c.requests.length} request(s)?`, () => { S.collections = S.collections.filter(x => x !== c); tabs.forEach(t => { if (t.link && t.link.cid === c.id) t.link = null; }); persist(); }); } }))),
+        open && reqs.map(r => h('div', { class: 'item' + (cur && cur.req.id === r.id && cur.link ? ' on' : ''), onclick: () => openSaved(c.id, r) },
+          h('span', { class: 'mt ' + r.method }, r.method), h('span', { class: 'nm', title: r.url }, r.name || r.url),
+          h('span', { class: 'acts' },
+            h('button', { class: 'ib', title: 'Rename', html: ic.edit, onclick: e => { e.stopPropagation(); ask('Rename request', r.name, v => { r.name = v; tabs.forEach(t => { if (t.link && t.req.id === r.id) t.req.name = v; }); persist(); renderSide(); renderTabs(); }); } }),
+            h('button', { class: 'ib', title: 'Duplicate', html: ic.copy, onclick: e => { e.stopPropagation(); const d = clone(r); d.id = uid(); d.name = (r.name || 'Request') + ' copy'; c.requests.splice(c.requests.indexOf(r) + 1, 0, d); persist(); renderSide(); } }),
+            h('button', { class: 'ib', title: 'Delete', html: ic.trash, onclick: e => { e.stopPropagation(); sure(`Delete “${r.name || r.url}”?`, () => { c.requests = c.requests.filter(x => x !== r); tabs.forEach(t => { if (t.link && t.req.id === r.id) t.link = null; }); persist(); }); } }))))));
+    }
+  } else {
+    tools.append(h('button', { class: 'btn ghost sm', onclick: () => { S.history = []; persist(); renderSide(); } }, 'Clear history'));
+    const items = S.history.filter(x => reqMatch({ name: '', url: x.url, method: x.method }, q));
+    if (!items.length) list.append(h('div', { class: 'empty' }, 'Nothing sent yet.'));
+    for (const x of items) list.append(h('div', { class: 'item hist', onclick: () => openTab(x.req) },
+      h('span', { class: 'mt ' + x.method }, x.method),
+      h('span', { class: 'txtc' }, h('span', { class: 'nm', style: 'display:block' }, x.url), h('span', { class: 'sub' }, new Date(x.ts).toLocaleString() + ' · ' + fmtTime(x.time))),
+      h('span', { class: 'pill s' + Math.floor(x.status / 100), style: 'padding:0 8px' }, String(x.status))));
+  }
+}
+
+/* ---------- editor ---------- */
+const SUBS = [['params', 'Params'], ['headers', 'Headers'], ['body', 'Body'], ['auth', 'Auth'], ['settings', 'Settings']];
+function renderRtabs() {
+  const t = cur, box = $('#rtabs'); box.innerHTML = '';
+  const n = a => a.filter(r => r.on !== false && r.k).length;
+  const badge = { params: n(t.req.params), headers: n(t.req.headers), body: t.req.body.mode !== 'none' ? '●' : 0, auth: t.req.auth.type !== 'none' ? '●' : 0 };
+  for (const [k, l] of SUBS) box.append(h('button', { class: t.sub === k ? 'on' : '', onclick: () => { t.sub = k; renderRtabs(); renderPane(); } }, l, badge[k] ? h('span', { class: 'bdg' }, String(badge[k])) : null));
+}
+function renderEditor() {
+  const t = cur; if (!t) return;
+  const m = $('#method'); m.innerHTML = ''; METHODS.forEach(x => m.append(h('option', { value: x, selected: x === t.req.method }, x))); m.className = 'msel ' + t.req.method;
+  $('#url').value = t.req.url; setBusy();
+  renderRtabs(); renderPane();
+}
+function setBusy() { const b = $('#send'); if (!cur) return; b.textContent = cur.busy ? 'Cancel' : 'Send'; b.className = 'btn ' + (cur.busy ? 'red' : 'green'); }
+$('#method').onchange = e => { cur.req.method = e.target.value; e.target.className = 'msel ' + cur.req.method; dirty(); if (cur.sub === 'body') renderPane(); };
+$('#url').oninput = e => { cur.req.url = e.target.value; paramsFromUrl(cur); dirty(); renderRtabs(); if (cur.sub === 'params') renderPane(); };
+
+function renderPane() {
+  const t = cur, p = $('#pane'); p.innerHTML = ''; if (!t) return;
+  const onch = () => { dirty(); renderRtabs(); };
+  if (t.sub === 'params') p.append(kvTable(t.req.params, { ph: ['Parameter', 'Value'], onchange: () => { urlFromParams(t); onch(); } }));
+  else if (t.sub === 'headers') p.append(kvTable(t.req.headers, { ph: ['Header', 'Value'], list: 'hdrs', onchange: onch }));
+  else if (t.sub === 'body') p.append(paneBody(t));
+  else if (t.sub === 'auth') p.append(paneAuth(t));
+  else p.append(h('div', {},
+    h('label', { class: 'radio' + (t.req.settings.follow ? ' on' : ''), style: 'margin-bottom:12px' }, h('input', { type: 'checkbox', checked: t.req.settings.follow, onchange: e => { t.req.settings.follow = e.target.checked; dirty(); renderPane(); } }), 'Follow redirects'),
+    h('div', { class: 'field' }, h('label', {}, 'Timeout (ms)'), h('input', { class: 'txt', type: 'number', min: 0, value: t.req.settings.timeout, oninput: e => { t.req.settings.timeout = Number(e.target.value) || 0; dirty(); } })),
+    h('p', { class: 'hint' }, '0 = no timeout. Requests are sent from the local server, so there are no CORS limits.')));
+}
+function paneBody(t) {
+  const b = t.req.body, w = h('div', { class: 'bodywrap' });
+  const ta = h('textarea', { class: 'txt area', spellcheck: 'false', value: b.raw, placeholder: '{\n  "hello": "world"\n}',
+    oninput: e => { b.raw = e.target.value; dirty(); },
+    onkeydown: e => { if (e.key === 'Tab') { e.preventDefault(); const s = ta.selectionStart; ta.setRangeText('  ', s, ta.selectionEnd, 'end'); b.raw = ta.value; dirty(); } } });
+  const modes = [['none', 'none'], ['form', 'form-data'], ['urlenc', 'x-www-form-urlencoded'], ['raw', 'raw']];
+  w.append(h('div', { class: 'radios' },
+    modes.map(([v, l]) => h('label', { class: 'radio' + (b.mode === v ? ' on' : '') }, h('input', { type: 'radio', name: 'bm', checked: b.mode === v, onchange: () => { b.mode = v; dirty(); renderRtabs(); renderPane(); } }), l)),
+    b.mode === 'raw' && h('select', { class: 'sel', onchange: e => { b.rawType = e.target.value; dirty(); renderPane(); } },
+      ['json', 'text', 'xml', 'html'].map(x => h('option', { value: x, selected: b.rawType === x }, { json: 'JSON', text: 'Text', xml: 'XML', html: 'HTML' }[x]))),
+    b.mode === 'raw' && b.rawType === 'json' && h('button', { class: 'btn ghost sm', onclick: () => {
+      try { JSON.parse(b.raw); b.raw = prettyJSON(b.raw); ta.value = b.raw; dirty(); } catch (e) { toast('Invalid JSON: ' + e.message); } } }, 'Beautify')));
+  if (b.mode === 'form') w.append(kvTable(b.form, { file: true, onchange: dirty }));
+  else if (b.mode === 'urlenc') w.append(kvTable(b.urlenc, { onchange: dirty }));
+  else if (b.mode === 'raw') w.append(ta);
+  else w.append(h('p', { class: 'muted' }, 'This request has no body.'));
+  if (b.mode !== 'none' && (t.req.method === 'GET' || t.req.method === 'HEAD')) w.append(h('p', { class: 'hint warn' }, t.req.method + ' requests are sent without a body (the fetch engine does not allow one).'));
+  return w;
+}
+function paneAuth(t) {
+  const a = t.req.auth, w = h('div', {});
+  const f = (label, key, type = 'text') => h('div', { class: 'field' }, h('label', {}, label), h('input', { class: 'txt', type, value: a[key], spellcheck: 'false', oninput: e => { a[key] = e.target.value; dirty(); } }));
+  w.append(h('div', { class: 'field' }, h('label', {}, 'Type'), h('select', { class: 'sel', style: 'width:100%', onchange: e => { a.type = e.target.value; dirty(); renderRtabs(); renderPane(); } },
+    [['none', 'No auth'], ['bearer', 'Bearer token'], ['basic', 'Basic auth'], ['apikey', 'API key']].map(([v, l]) => h('option', { value: v, selected: a.type === v }, l)))));
+  if (a.type === 'bearer') w.append(f('Token', 'token'));
+  if (a.type === 'basic') w.append(f('Username', 'user'), f('Password', 'pass', 'password'));
+  if (a.type === 'apikey') w.append(f('Key', 'key'), f('Value', 'value'), h('div', { class: 'field' }, h('label', {}, 'Add to'), h('select', { class: 'sel', style: 'width:100%', onchange: e => { a.in = e.target.value; dirty(); } },
+    h('option', { value: 'header', selected: a.in === 'header' }, 'Header'), h('option', { value: 'query', selected: a.in === 'query' }, 'Query params'))));
+  w.append(h('p', { class: 'hint' }, 'An explicit Authorization header in the Headers tab takes priority. Variables like {{token}} work here.'));
+  return w;
+}
+
+/* ---------- build + send ---------- */
+function buildPayload(t) {
+  const vars = envVars(), R = s => resolve(s, vars), r = t.req;
+  let url = R(r.url.trim());
+  if (!url) throw new Error('Enter a URL first');
+  url = url.split('#')[0];
+  if (!/^[a-z][a-z0-9+.\-]*:\/\//i.test(url)) url = 'http://' + url;
+  const hs = r.headers.filter(x => x.on !== false && x.k.trim()).map(x => [R(x.k.trim()), R(x.v)]);
+  const has = n => hs.some(([k]) => k.toLowerCase() === n);
+  const a = r.auth;
+  if (a.type === 'bearer' && a.token && !has('authorization')) hs.push(['Authorization', 'Bearer ' + R(a.token)]);
+  else if (a.type === 'basic' && !has('authorization')) hs.push(['Authorization', 'Basic ' + b64utf8(R(a.user) + ':' + R(a.pass))]);
+  else if (a.type === 'apikey' && a.key) { if (a.in === 'query') url += (url.includes('?') ? '&' : '?') + encQ(R(a.key)) + '=' + encQ(R(a.value)); else hs.push([R(a.key), R(a.value)]); }
+  const b = r.body; let body = { mode: 'none' };
+  if (b.mode === 'raw') { body = { mode: 'raw', raw: R(b.raw) }; if (b.raw && !has('content-type')) hs.push(['Content-Type', RAWCT[b.rawType]]); }
+  else if (b.mode === 'urlenc') {
+    body = { mode: 'urlencoded', raw: b.urlenc.filter(x => x.on !== false && x.k).map(x => encF(R(x.k)) + '=' + encF(R(x.v))).join('&') };
+    if (!has('content-type')) hs.push(['Content-Type', 'application/x-www-form-urlencoded']);
+  } else if (b.mode === 'form') {
+    body = { mode: 'form', form: b.form.filter(x => x.on !== false && x.k).map(x => x.type === 'file'
+      ? { key: R(x.k), type: 'file', name: x.file && x.file.name, mime: x.file && x.file.mime, data: x.file && x.file.data }
+      : { key: R(x.k), type: 'text', value: R(x.v) }) };
+  }
+  return { method: r.method, url, headers: hs, body, follow: r.settings.follow, timeout: r.settings.timeout };
+}
+async function send() {
+  const t = cur; if (!t) return;
+  if (t.busy) { t.ctl.abort(); return; }
+  let p; try { p = buildPayload(t); } catch (e) { toast(e.message); return; }
+  t.busy = true; t.res = null; t.ctl = new AbortController(); setBusy(); renderRes();
+  try {
+    const r = await api('/api/send', { method: 'POST', body: JSON.stringify(p), signal: t.ctl.signal });
+    if (r.error) t.res = { error: r.error };
+    else {
+      t.res = r; t.rv = { tab: 'body', view: null };
+      S.history.unshift({ id: uid(), ts: Date.now(), method: p.method, url: p.url, status: r.status, time: r.time, req: stripFiles(trimReq(t.req)) });
+      S.history.length = Math.min(S.history.length, 80); persist();
+      if (sideMode === 'hist') renderSide();
+    }
+  } catch (e) { t.res = { error: e.name === 'AbortError' ? 'Request cancelled' : 'Could not reach the AeroPost server: ' + e.message }; }
+  t.busy = false;
+  if (cur === t) { setBusy(); renderRes(); }
+}
+$('#send').onclick = send; $('#save').onclick = () => save(false); $('#saveAs').onclick = () => save(true);
+$('#curl').onclick = () => {
+  try {
+    const p = buildPayload(cur), q = s => "'" + String(s).replace(/'/g, "'\\''") + "'";
+    let c = `curl -X ${p.method} ${q(p.url)}`;
+    if (!p.follow) c += ' \\\n  --max-redirs 0'; else c += ' -L';
+    for (const [k, v] of p.headers) c += ` \\\n  -H ${q(k + ': ' + v)}`;
+    if (p.method !== 'GET' && p.method !== 'HEAD') {
+      if (p.body.mode === 'raw' || p.body.mode === 'urlencoded') { if (p.body.raw) c += ` \\\n  --data-raw ${q(p.body.raw)}`; }
+      else if (p.body.mode === 'form') for (const f of p.body.form) c += ` \\\n  -F ${q(f.key + (f.type === 'file' ? '=@' + (f.name || 'file') : '=' + f.value))}`;
+    }
+    navigator.clipboard.writeText(c).then(() => toast('cURL copied'), () => modal({ title: 'cURL', body: h('textarea', { class: 'txt area', readonly: true, value: c }), cancel: null }));
+  } catch (e) { toast(e.message); }
+};
+
+/* ---------- response ---------- */
+function prettyJSON(s) { // re-indent text without parsing numbers (keeps big ints intact)
+  let out = '', ind = 0, str = false, esc = false; const nl = () => '\n' + '  '.repeat(ind);
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (str) { out += c; if (esc) esc = false; else if (c === '\\') esc = true; else if (c === '"') str = false; continue; }
+    if (c === '"') { str = true; out += c; }
+    else if (c === '{' || c === '[') {
+      let j = i + 1; while (/\s/.test(s[j] || '')) j++;
+      if (s[j] === '}' || s[j] === ']') { out += c + s[j]; i = j; } else { ind++; out += c + nl(); }
+    } else if (c === '}' || c === ']') { ind--; out += nl() + c; }
+    else if (c === ',') out += c + nl();
+    else if (c === ':') out += ': ';
+    else if (!/\s/.test(c)) out += c;
+  }
+  return out;
+}
+function hl(s) {
+  return esc(s).replace(/("(\\u[\da-fA-F]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, m => {
+    let c = 'jn'; if (m[0] === '"') c = /:$/.test(m) ? 'jk' : 'js'; else if (m === 'true' || m === 'false') c = 'jb'; else if (m === 'null') c = 'jz';
+    return `<span class="${c}">${m}</span>`;
+  });
+}
+function decodeRes(r) {
+  if (r._bytes) return;
+  r._bytes = Uint8Array.from(atob(r.body), c => c.charCodeAt(0));
+  const ct = (r.headers.find(([k]) => k === 'content-type') || [, ''])[1].toLowerCase(); r.ct = ct;
+  r.isImg = ct.startsWith('image/'); r.isHtml = ct.includes('html');
+  r.text = r.isImg ? '' : new TextDecoder().decode(r._bytes);
+  r.isJson = false;
+  if (!r.isImg && r.text.trim()) { const s = r.text.trim(); if (ct.includes('json') || s[0] === '{' || s[0] === '[') { try { JSON.parse(s); r.isJson = true; } catch { /* not json */ } } }
+}
+const LIMIT = 2 * 1048576;
+function renderRes() {
+  const t = cur, box = $('#response'); box.innerHTML = ''; if (!t) return;
+  if (t.busy) { box.append(h('div', { class: 'empty' }, h('div', { class: 'spin' }), 'Sending request…')); return; }
+  const r = t.res;
+  if (!r) { box.append(h('div', { class: 'empty' }, h('i', { class: 'orb big' }), h('div', {}, 'Hit ', h('b', {}, 'Send'), ' to see the response here'), h('small', {}, 'Ctrl + Enter'))); return; }
+  if (r.error) { box.append(h('div', { class: 'errcard' }, h('b', {}, 'Request failed'), h('p', {}, r.error))); return; }
+  decodeRes(r);
+  const rv = t.rv; if (!rv.view) rv.view = r.isImg ? 'preview' : r.isJson ? 'pretty' : 'raw';
+  const head = h('div', { class: 'rhead' },
+    h('span', { class: 'pill s' + Math.floor(r.status / 100) }, `${r.status} ${r.statusText}`),
+    h('span', { class: 'pill' }, fmtTime(r.time)), h('span', { class: 'pill' }, fmtSize(r.size)),
+    r.redirected && h('span', { class: 'pill', title: r.url }, 'redirected'),
+    h('div', { class: 'seg', style: 'margin-left:8px' },
+      ['body', 'headers'].map(k => h('button', { class: rv.tab === k ? 'on' : '', onclick: () => { rv.tab = k; renderRes(); } }, k === 'body' ? 'Body' : `Headers (${r.headers.length})`))),
+    rv.tab === 'body' && h('div', { class: 'seg' },
+      [['pretty', 'Pretty'], ['raw', 'Raw'], (r.isHtml || r.isImg) && ['preview', 'Preview']].filter(Boolean).map(([k, l]) => h('button', { class: rv.view === k ? 'on' : '', onclick: () => { rv.view = k; renderRes(); } }, l))),
+    h('div', { class: 'grow' }),
+    h('button', { class: 'btn ghost sm', onclick: () => navigator.clipboard.writeText(r.text || '').then(() => toast('Copied')) }, 'Copy'),
+    h('button', { class: 'btn ghost sm', onclick: () => {
+      const ext = r.isJson ? 'json' : r.isHtml ? 'html' : r.isImg ? (r.ct.split('/')[1] || 'bin').split(';')[0] : 'txt';
+      const a = h('a', { href: URL.createObjectURL(new Blob([r._bytes], { type: r.ct || 'application/octet-stream' })), download: 'response.' + ext }); a.click();
+    } }, 'Download'));
+  const view = h('div', { class: 'rview' });
+  if (rv.tab === 'headers') view.append(h('table', { class: 'htab' }, h('tbody', {}, r.headers.map(([k, v]) => h('tr', {}, h('td', {}, k), h('td', {}, v))))));
+  else if (rv.view === 'preview' && r.isImg) view.append(h('img', { class: 'prev', src: URL.createObjectURL(new Blob([r._bytes], { type: r.ct })) }));
+  else if (rv.view === 'preview') view.append(h('iframe', { class: 'prev', sandbox: '', srcdoc: r.text }));
+  else if (!r.size) view.append(h('div', { class: 'empty' }, '(empty body)'));
+  else if (r.isImg) view.append(h('div', { class: 'empty' }, 'Binary image — use Preview or Download.'));
+  else {
+    let txt = r.text, note = '';
+    if (rv.view === 'pretty' && r.isJson) txt = prettyJSON(r.text.trim());
+    if (txt.length > LIMIT) { txt = txt.slice(0, LIMIT); note = '\n\n… truncated for display (use Download for the full body)'; }
+    const pre = h('pre', { class: 'code' });
+    if (rv.view === 'pretty' && r.isJson && txt.length < 600000) pre.innerHTML = hl(txt) + esc(note); else pre.textContent = txt + note;
+    view.append(pre);
+  }
+  box.append(head, view);
+}
+
+/* ---------- import / export ---------- */
+function download(name, text) { const a = h('a', { href: URL.createObjectURL(new Blob([text], { type: 'application/json' })), download: name }); a.click(); }
+$('#expBtn').onclick = () => { download('aeropost-export.json', JSON.stringify({ aeropost: 1, collections: S.collections, envs: S.envs }, null, 2)); };
+$('#impBtn').onclick = () => $('#importFile').click();
+$('#importFile').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try {
+    const j = JSON.parse(await f.text()); let n = 0;
+    if (j.info && j.item) { importPostman(j); n = 1; }
+    else if (j.aeropost) {
+      for (const c of j.collections || []) { c.id = uid(); c.requests.forEach(r => r.id = uid()); S.collections.push(c); n++; }
+      for (const v of j.envs || []) { v.id = uid(); S.envs.push(v); n++; }
+    } else throw new Error('Unrecognized file');
+    persist(); renderSide(); renderEnvSel(); toast('Imported');
+  } catch (err) { toast('Import failed: ' + err.message); }
+};
+function importPostman(j) {
+  const col = { id: uid(), name: j.info.name || 'Imported', requests: [] };
+  const kv = a => (a || []).map(x => ({ k: x.key || '', v: x.value || '', on: !x.disabled, type: x.type === 'file' ? 'text' : 'text' }));
+  const walk = (items, pre) => items.forEach(it => {
+    if (it.item) return walk(it.item, pre + it.name + ' / ');
+    const q = it.request; if (!q) return;
+    const r = newReq(); r.name = pre + (it.name || ''); r.method = (q.method || 'GET').toUpperCase();
+    r.url = typeof q.url === 'string' ? q.url : (q.url && q.url.raw) || ''; paramsFromUrl({ req: r });
+    r.headers = kv(q.header);
+    const b = q.body;
+    if (b) {
+      if (b.mode === 'raw') { r.body.mode = 'raw'; r.body.raw = b.raw || ''; const l = b.options && b.options.raw && b.options.raw.language; r.body.rawType = ['json', 'xml', 'html'].includes(l) ? l : l === 'text' ? 'text' : 'json'; }
+      else if (b.mode === 'urlencoded') { r.body.mode = 'urlenc'; r.body.urlenc = kv(b.urlencoded); }
+      else if (b.mode === 'formdata') { r.body.mode = 'form'; r.body.form = (b.formdata || []).map(x => ({ k: x.key || '', v: x.value || '', on: !x.disabled, type: 'text' })); }
+    }
+    const au = q.auth || it.auth;
+    if (au && au.type === 'bearer') { r.auth.type = 'bearer'; r.auth.token = ((au.bearer || []).find(x => x.key === 'token') || {}).value || ''; }
+    else if (au && au.type === 'basic') { r.auth.type = 'basic'; const g = k => ((au.basic || []).find(x => x.key === k) || {}).value || ''; r.auth.user = g('username'); r.auth.pass = g('password'); }
+    col.requests.push(r);
+  });
+  walk(j.item, '');
+  S.collections.push(col);
+  if (j.variable && j.variable.length) S.envs.push({ id: uid(), name: (j.info.name || 'Imported') + ' vars', vars: j.variable.map(v => ({ k: v.key || '', v: v.value || '', on: true })) });
+}
+$('#envBtn').onclick = envDialog;
+
+/* ---------- layout + shortcuts ---------- */
+$('#split').onpointerdown = e => {
+  e.preventDefault(); const work = $('#work');
+  const move = ev => { const r = work.getBoundingClientRect(); work.style.setProperty('--split', Math.min(78, Math.max(18, (ev.clientY - r.top) / r.height * 100)) + '%'); };
+  addEventListener('pointermove', move); addEventListener('pointerup', () => removeEventListener('pointermove', move), { once: true });
+};
+addEventListener('keydown', e => {
+  const mod = e.ctrlKey || e.metaKey;
+  if (mod && e.key === 'Enter') { e.preventDefault(); send(); }
+  else if (mod && e.key.toLowerCase() === 's') { e.preventDefault(); save(false); }
+});
+addEventListener('beforeunload', e => { if (tabs.some(t => t.dirty)) { e.preventDefault(); e.returnValue = ''; } });
+
+function renderAll() { renderSide(); renderTabs(); renderEditor(); renderRes(); }
+
+/* ---------- boot ---------- */
+(async () => {
+  try { S = Object.assign(S, await api('/api/data')); } catch { toast('Could not load saved data'); }
+  if (!S.seeded && !S.collections.length) {
+    const mk = (name, f) => Object.assign(newReq(), { name }, f);
+    const post = mk('POST JSON body', { method: 'POST', url: 'https://httpbin.org/post', headers: [{ k: 'X-Demo', v: 'aeropost', on: true, type: 'text' }] });
+    post.body = { mode: 'raw', rawType: 'json', raw: '{\n  "hello": "world",\n  "from": "AeroPost"\n}', form: [], urlenc: [] };
+    const form = mk('POST form-data', { method: 'POST', url: 'https://httpbin.org/post' });
+    form.body = { mode: 'form', rawType: 'json', raw: '', urlenc: [], form: [{ k: 'name', v: 'Aero', on: true, type: 'text' }, { k: 'file', v: '', on: true, type: 'file' }] };
+    const get = mk('GET with query params', { url: 'https://httpbin.org/get?lang=en&q=aero' }); paramsFromUrl({ req: get });
+    S.collections.push({ id: uid(), name: 'Samples', requests: [get, post, form] }); S.seeded = true; persist();
+  }
+  renderEnvSel();
+  openTab(newReq());
+})();
+</script>
+</body>
+</html>

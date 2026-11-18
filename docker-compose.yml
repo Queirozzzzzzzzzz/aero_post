@@ -1,0 +1,11 @@
+services:
+  aeropost:
+    build: .
+    container_name: aeropost
+    restart: unless-stopped
+    ports:
+      - "${BIND_IP:-10.1.10.2}:5757:5757"
+    environment:
+      ALLOWED_HOSTS: "${ALLOWED_HOSTS:-10.1.10.2,localhost,127.0.0.1}"
+    volumes:
+      - ./data:/data
